@@ -6297,5 +6297,501 @@ body.qt-shop-app img{
 })();
 </script>
 
+
+<!-- QueueTech Shop New Order Alert + 1 Minute Order Refresh -->
+<style id="qt-shop-new-order-alert">
+  .qt-shop-new-order-overlay{
+    position:fixed;inset:0;z-index:120000;display:none;
+    align-items:center;justify-content:center;
+    background:rgba(15,23,42,.78);backdrop-filter:blur(5px);
+    padding:18px;box-sizing:border-box;
+  }
+  .qt-shop-new-order-overlay.show{display:flex}
+  .qt-shop-new-order-card{
+    width:min(520px,100%);background:#fff;border-radius:24px;
+    box-shadow:0 24px 70px rgba(0,0,0,.35);padding:24px;text-align:center;
+    border:3px solid #16b978;animation:qtOrderPulse 1s ease-in-out infinite alternate;
+  }
+  .qt-shop-new-order-icon{font-size:64px;line-height:1;margin-bottom:10px}
+  .qt-shop-new-order-card h2{margin:0 0 8px;font-size:27px;color:#0f172a}
+  .qt-shop-new-order-card p{margin:6px 0;color:#475569}
+  .qt-shop-new-order-number{
+    margin:14px 0;padding:13px;border-radius:14px;background:#e9fbf3;
+    color:#0f9f68;font-size:25px;font-weight:800;
+  }
+  .qt-shop-new-order-total{font-size:20px;font-weight:800;margin:8px 0 18px}
+  .qt-shop-new-order-ack{
+    width:100%;border:0;border-radius:14px;padding:15px 18px;
+    background:#16b978;color:#fff;font-size:18px;font-weight:800;cursor:pointer;
+  }
+  .qt-shop-new-order-ack:active{transform:scale(.98)}
+  @keyframes qtOrderPulse{
+    from{transform:scale(1)}
+    to{transform:scale(1.015)}
+  }
+  .qt-shop-live-status{
+    display:inline-flex;align-items:center;gap:6px;font-size:11px;
+    color:#64748b;margin-top:5px;
+  }
+  .qt-shop-live-dot{
+    width:8px;height:8px;border-radius:50%;background:#16b978;
+    box-shadow:0 0 0 4px #e9fbf3;
+  }
+</style>
+
+<script id="qt-shop-new-order-realtime-v1">
+(function(){
+  const SEEN_KEY='qt_shop_seen_pending_orders_v1';
+  const ACK_KEY='qt_shop_new_order_ack_v1';
+  const CHECK_MS=60000; // ตรวจหน้ารับออเดอร์ทุก 1 นาที
+  let audioCtx=null;
+  let activeOrderId=null;
+  let soundTimer=null;
+  let initialized=false;
+  let checkBusy=false;
+
+  function shopUserSafe(){
+    try{
+      const u=typeof shopUser==='function'?shopUser():null;
+      if(u && u.type==='shop') return u;
+    }catch(e){}
+    try{
+      const u=typeof currentUser==='function'?currentUser():null;
+      if(u && u.type==='shop') return u;
+    }catch(e){}
+    return null;
+  }
+
+  function readSeen(){
+    try{
+      const x=JSON.parse(sessionStorage.getItem(SEEN_KEY)||'[]');
+      return new Set(Array.isArray(x)?x.map(String):[]);
+    }catch(e){ return new Set(); }
+  }
+  function saveSeen(set){
+    try{
+      const a=[...set].slice(-300);
+      sessionStorage.setItem(SEEN_KEY,JSON.stringify(a));
+    }catch(e){}
+  }
+
+  function unlockShopAudio(){
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(AC){
+        if(!audioCtx) audioCtx=new AC();
+        if(audioCtx.state==='suspended') audioCtx.resume();
+      }
+    }catch(e){}
+  }
+  document.addEventListener('click',unlockShopAudio,{passive:true});
+  document.addEventListener('touchend',unlockShopAudio,{passive:true});
+  document.addEventListener('pointerup',unlockShopAudio,{passive:true});
+
+  function beep(){
+    try{
+      unlockShopAudio();
+      if(!audioCtx) return;
+      const now=audioCtx.currentTime;
+      [0,0.22,0.44].forEach((offset,i)=>{
+        const osc=audioCtx.createOscillator();
+        const gain=audioCtx.createGain();
+        osc.type='sine';
+        osc.frequency.value=i===1?1046:880;
+        gain.gain.setValueAtTime(0.0001,now+offset);
+        gain.gain.exponentialRampToValueAtTime(0.28,now+offset+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.18);
+        osc.connect(gain);gain.connect(audioCtx.destination);
+        osc.start(now+offset);osc.stop(now+offset+0.2);
+      });
+    }catch(e){}
+  }
+
+  function speak(){
+    try{
+      if(!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance('มีออเดอร์ใหม่เข้ามาค่ะ กรุณาตรวจสอบออเดอร์ใหม่');
+      u.lang='th-TH';u.rate=.95;u.pitch=1;u.volume=1;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  function stopSound(){
+    clearInterval(soundTimer);soundTimer=null;
+    try{window.speechSynthesis.cancel();}catch(e){}
+  }
+
+  function ensureOverlay(){
+    if(document.getElementById('qtShopNewOrderOverlay')) return;
+    const el=document.createElement('div');
+    el.id='qtShopNewOrderOverlay';
+    el.className='qt-shop-new-order-overlay';
+    el.innerHTML=`
+      <div class="qt-shop-new-order-card" role="alertdialog" aria-modal="true">
+        <div class="qt-shop-new-order-icon">🔔📦</div>
+        <h2>มีออเดอร์ใหม่เข้ามา!</h2>
+        <p>กรุณาตรวจสอบและกดรับออเดอร์</p>
+        <div id="qtShopNewOrderNumber" class="qt-shop-new-order-number">ออเดอร์ใหม่</div>
+        <div id="qtShopNewOrderTotal" class="qt-shop-new-order-total"></div>
+        <button class="qt-shop-new-order-ack" onclick="qtAcknowledgeShopNewOrder()">
+          รับทราบและดูออเดอร์
+        </button>
+      </div>`;
+    document.body.appendChild(el);
+  }
+
+  function showAlert(order){
+    ensureOverlay();
+    activeOrderId=order.id;
+    const n=document.getElementById('qtShopNewOrderNumber');
+    const t=document.getElementById('qtShopNewOrderTotal');
+    if(n) n.textContent=(typeof displayOrderNumber==='function' ? displayOrderNumber(order) : (order.orderNumber||'ออเดอร์ใหม่'));
+    if(t) t.textContent='ยอดรวม ฿'+Number(order.total||0).toLocaleString('th-TH');
+    document.getElementById('qtShopNewOrderOverlay')?.classList.add('show');
+    try{sessionStorage.setItem(ACK_KEY,String(order.id));}catch(e){}
+    stopSound();
+    beep();speak();
+    soundTimer=setInterval(()=>{ beep(); speak(); },3500);
+  }
+
+  window.qtAcknowledgeShopNewOrder=function(){
+    const id=activeOrderId;
+    stopSound();
+    document.getElementById('qtShopNewOrderOverlay')?.classList.remove('show');
+    activeOrderId=null;
+    if(id){
+      try{sessionStorage.removeItem(ACK_KEY);}catch(e){}
+      if(typeof navigate==='function') navigate('shop-order/'+id);
+    }
+  };
+
+  function pendingShopOrders(u){
+    try{
+      const all=typeof dbGet==='function'?dbGet('qt_orders',[]):[];
+      return (Array.isArray(all)?all:[])
+        .filter(o=>String(o.shopId)===String(u.id) && o.status==='pending_shop')
+        .sort((a,b)=>(Number(a.createdAt)||0)-(Number(b.createdAt)||0));
+    }catch(e){return [];}
+  }
+
+  async function refreshEveryMinute(){
+    const u=shopUserSafe();
+    if(!u || checkBusy) return;
+    checkBusy=true;
+    try{
+      // ใช้ Supabase Realtime ที่มีอยู่ก่อน; ถ้าข้อมูลยังไม่เปลี่ยน
+      // ให้ hydrate ใหม่ทุก 1 นาทีเป็น fallback/heartbeat ของหน้ารับออเดอร์
+      if(typeof window.QT_REALTIME_FORCE_REFRESH==='function'){
+        await window.QT_REALTIME_FORCE_REFRESH();
+      }else if(typeof window.qtBackgroundHydrate==='function'){
+        await window.qtBackgroundHydrate({light:false});
+      }else if(typeof window.qtHydrateDatabase==='function'){
+        await window.qtHydrateDatabase({light:false});
+      }
+      checkForNewOrders();
+    }catch(e){
+      console.warn('[QueueTech Shop Order Monitor]',e);
+    }finally{
+      checkBusy=false;
+    }
+  }
+
+  function checkForNewOrders(){
+    const u=shopUserSafe();
+    if(!u) return;
+    const orders=pendingShopOrders(u);
+    const seen=readSeen();
+
+    // ครั้งแรก: จำออเดอร์ที่มีอยู่แล้ว ไม่ยิงเสียงย้อนหลัง
+    if(!initialized){
+      orders.forEach(o=>seen.add(String(o.id)));
+      saveSeen(seen);
+      initialized=true;
+      return;
+    }
+
+    for(const order of orders){
+      if(!seen.has(String(order.id))){
+        seen.add(String(order.id));
+        saveSeen(seen);
+        showAlert(order);
+        break;
+      }
+    }
+  }
+
+  function boot(){
+    ensureOverlay();
+    setTimeout(()=>{
+      checkForNewOrders();
+      // หน้ารับออเดอร์ตรวจสอบ/ซิงก์ทุก 1 นาที
+      setInterval(refreshEveryMinute,CHECK_MS);
+    },1200);
+  }
+
+  window.addEventListener('qt:realtime-update',()=>{
+    // Supabase Realtime เข้ามาก่อน 1 นาทีได้ทันที
+    checkForNewOrders();
+  });
+  window.addEventListener('hashchange',()=>{
+    setTimeout(checkForNewOrders,250);
+  });
+  window.addEventListener('storage',ev=>{
+    if(ev.key==='qt_orders') setTimeout(checkForNewOrders,50);
+  });
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+  else boot();
+})();
+</script>
+
+
+<!-- QueueTech Food Menu Options + GP 10% -->
+<style id="qt-food-menu-options-gp10-v1">
+  .qt-menu-option-box{margin-top:10px;padding:12px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}
+  .qt-menu-option-row{display:flex;gap:7px;align-items:center;margin:7px 0}
+  .qt-menu-option-row input{margin:0}
+  .qt-menu-option-row .qt-opt-name{flex:1}
+  .qt-menu-option-row .qt-opt-price{width:105px}
+  .qt-menu-option-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+  .qt-menu-note{font-size:12px;color:#64748b;line-height:1.5;margin:7px 0}
+  .qt-menu-gp-note{padding:10px;border-radius:12px;background:#ecfdf5;color:#166534;font-size:12px;line-height:1.5}
+  .qt-customer-option-box{margin-top:8px;padding:9px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}
+  .qt-customer-option-box label{display:block;margin:5px 0;font-size:13px}
+  .qt-customer-option-box select{width:100%;padding:8px;border-radius:9px;border:1px solid #cbd5e1}
+  .qt-option-summary{font-size:12px;color:#475569;margin-top:6px}
+</style>
+<script id="qt-food-menu-options-gp10-v1">
+(function(){
+  const GP_RATE = 0.10;
+
+  function money(n){
+    return Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function esc(v){ return typeof escapeHtml==='function' ? escapeHtml(v==null?'':String(v)) : String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  window.qtFoodSalePrice = function(netPrice){
+    const n=Number(netPrice)||0;
+    // ร้านต้องการได้รับ netPrice หลังหัก GP 10%
+    return Math.ceil((n/(1-GP_RATE))*100)/100;
+  };
+  window.qtFoodGp = function(salePrice){
+    return Math.round((Number(salePrice)||0)*GP_RATE*100)/100;
+  };
+
+  function optionEditor(options){
+    options=Array.isArray(options)?options:[];
+    return `
+      <div class="qt-menu-option-box">
+        <b>🍽️ ตัวเลือกเมนู</b>
+        <div class="qt-menu-note">ตั้งได้ทั้ง <b>ธรรมดา</b>, <b>พิเศษ</b> และตัวเลือกอื่น ๆ เอง เช่น เพิ่มไข่, เพิ่มชีส, เพิ่มเนื้อ ระบบจะบวกราคาตามตัวเลือกให้ลูกค้าอัตโนมัติ</div>
+        <div id="qt-menu-options-list">
+          ${options.map((o,i)=>`
+            <div class="qt-menu-option-row" data-index="${i}">
+              <input class="qt-opt-name" placeholder="ชื่อตัวเลือก เช่น พิเศษ" value="${esc(o.name||'')}">
+              <input class="qt-opt-price" type="number" step="0.01" placeholder="+ ราคา" value="${Number(o.price||0)}">
+              <button type="button" onclick="this.parentElement.remove()">ลบ</button>
+            </div>`).join('')}
+        </div>
+        <div class="qt-menu-option-actions">
+          <button type="button" class="btn-secondary" onclick="qtAddMenuOption('ธรรมดา',0)">＋ ธรรมดา</button>
+          <button type="button" class="btn-secondary" onclick="qtAddMenuOption('พิเศษ',10)">＋ พิเศษ</button>
+          <button type="button" class="btn-secondary" onclick="qtAddMenuOption('',0)">＋ เพิ่มตัวเลือกเอง</button>
+        </div>
+      </div>`;
+  }
+
+  window.qtAddMenuOption=function(name,price){
+    const box=document.getElementById('qt-menu-options-list');
+    if(!box)return;
+    const row=document.createElement('div');
+    row.className='qt-menu-option-row';
+    row.innerHTML=`<input class="qt-opt-name" placeholder="ชื่อตัวเลือก เช่น เพิ่มไข่" value="${esc(name)}">
+      <input class="qt-opt-price" type="number" step="0.01" placeholder="+ ราคา" value="${Number(price)||0}">
+      <button type="button" onclick="this.parentElement.remove()">ลบ</button>`;
+    box.appendChild(row);
+  };
+
+  window.qtReadMenuOptions=function(){
+    return [...document.querySelectorAll('#qt-menu-options-list .qt-menu-option-row')].map(r=>({
+      name:(r.querySelector('.qt-opt-name')?.value||'').trim(),
+      price:Number(r.querySelector('.qt-opt-price')?.value||0)
+    })).filter(o=>o.name);
+  };
+
+  window.qtCalcFoodPrice=function(){
+    const net=Number(document.getElementById('p-net-price')?.value||0);
+    const sale=qtFoodSalePrice(net);
+    const gp=qtFoodGp(sale);
+    const out=document.getElementById('qt-food-gp-preview');
+    const price=document.getElementById('p-price');
+    if(price)price.value=sale.toFixed(2);
+    if(out)out.innerHTML=`ร้านต้องการได้รับ <b>฿${money(net)}</b> → ราคาหน้าลูกค้า <b>฿${money(sale)}</b><br>GP 10% = <b>฿${money(gp)}</b> → ร้านได้รับสุทธิประมาณ <b>฿${money(sale-gp)}</b>`;
+  };
+
+  // Replace the existing shop product form with the food-specific form.
+  window.openProductForm=function(id){
+    const products=dbGet('qt_products',[]);
+    const p=id?products.find(x=>x.id===id):null;
+    const area=document.getElementById('product-form-area');
+    if(!area)return;
+    const sale=Number(p?.price||0);
+    const net=p?.netPrice!=null?Number(p.netPrice):(sale?Math.round(sale*(1-GP_RATE)*100)/100:0);
+    area.innerHTML=`
+      <form id="prod-form" onsubmit="return handleSaveProduct(event,'${esc(id||'')}')" class="inline-form">
+        <label>ชื่อเมนู</label>
+        <input required id="p-name" value="${esc(p?.name||'')}" placeholder="เช่น ข้าวกะเพราหมู">
+        <label>ราคาที่ร้านต้องการได้รับสุทธิ (บาท)</label>
+        <input required type="number" step="0.01" id="p-net-price" value="${net||''}" placeholder="เช่น 50">
+        <button type="button" class="btn-secondary btn-block" onclick="qtCalcFoodPrice()">คำนวณราคาขาย + GP 10%</button>
+        <label>ราคาขายหน้าลูกค้า (บาท)</label>
+        <input required type="number" step="0.01" id="p-price" value="${sale||''}" readonly>
+        <div id="qt-food-gp-preview" class="qt-menu-gp-note">
+          ระบบคิด GP <b>10%</b> อัตโนมัติ ราคาที่ลูกค้าเห็นจะถูกคำนวณเพื่อให้ร้านได้รับสุทธิตามราคาที่ตั้งไว้
+        </div>
+        ${optionEditor(p?.options||[])}
+        <label>รายละเอียด</label>
+        <textarea id="p-desc" placeholder="รายละเอียดเมนู">${esc(p?.description||'')}</textarea>
+        <label>รูปภาพ</label>
+        <input type="file" id="p-image" accept="image/*">
+        <label><input type="checkbox" id="p-available" style="width:auto" ${(!p||p.available)?'checked':''}> มีเมนูพร้อมขาย</label>
+        <div class="row-btns">
+          <button class="btn-primary" type="submit">บันทึกเมนู</button>
+          <button type="button" onclick="document.getElementById('product-form-area').innerHTML=''">ยกเลิก</button>
+        </div>
+      </form>`;
+    qtCalcFoodPrice();
+  };
+
+  window.handleSaveProduct=async function(e,id){
+    e.preventDefault();
+    const user=currentUser();
+    if(!user||user.type!=='shop'){toast('เฉพาะร้านค้าเท่านั้น');return false;}
+    let products=dbGet('qt_products',[]);
+    const old=id?products.find(x=>x.id===id):null;
+    const file=document.getElementById('p-image')?.files?.[0];
+    const image=file?await readFileAsDataURL(file):(old?.image||'');
+    const netPrice=Number(document.getElementById('p-net-price')?.value||0);
+    const salePrice=qtFoodSalePrice(netPrice);
+    const data={
+      name:document.getElementById('p-name').value.trim(),
+      price:salePrice,
+      netPrice,
+      gpRate:GP_RATE,
+      gpAmount:qtFoodGp(salePrice),
+      options:qtReadMenuOptions(),
+      description:document.getElementById('p-desc').value.trim(),
+      available:document.getElementById('p-available').checked,
+      image
+    };
+    if(!data.name||netPrice<=0){toast('กรุณากรอกชื่อเมนูและราคาที่ร้านต้องการได้รับ');return false;}
+    if(id)Object.assign(old,data);
+    else products.push({id:uid(),shopId:user.id,...data});
+    dbSet('qt_products',products);
+    toast('บันทึกเมนูแล้ว • ระบบคิด GP 10% อัตโนมัติ');
+    if(typeof renderShopProducts==='function')renderShopProducts();
+    else if(typeof renderShopProductsModern==='function')renderShopProductsModern();
+    return false;
+  };
+
+  function optionControls(p){
+    const opts=Array.isArray(p.options)?p.options:[];
+    if(!opts.length)return '';
+    return `<div class="qt-customer-option-box">
+      <b>เลือกแบบ/เพิ่มเติม</b>
+      <select id="qt-opt-${esc(p.id)}">
+        ${opts.map((o,i)=>`<option value="${i}">${esc(o.name)}${Number(o.price)?` +฿${money(o.price)}`:''}</option>`).join('')}
+      </select>
+    </div>`;
+  }
+
+  window.productCardCustomer=function(p){
+    return `<div class="product-card">
+      <img src="${esc(p.image||placeholderImg())}" class="product-img">
+      <div class="product-info">
+        <b>${esc(p.name)}</b>
+        <div>฿${money(p.price)}</div>
+        <div>${esc(p.description||'')}</div>
+        ${optionControls(p)}
+        <button onclick="addToCart('${esc(p.id)}')">+ เพิ่มลงตะกร้า</button>
+      </div>
+    </div>`;
+  };
+
+  window.addToCart=function(productId){
+    const user=currentUser();
+    if(!user||user.type!=='customer'){toast('กรุณาเข้าสู่ระบบด้วยบัญชีลูกค้าก่อน');navigate('login');return;}
+    const product=dbGet('qt_products',[]).find(p=>p.id===productId);
+    if(!product)return;
+    let cart=dbGet('qt_cart_'+user.id,{shopId:null,items:[]});
+    if(cart.shopId&&cart.shopId!==product.shopId){
+      if(!confirm('ตะกร้าปัจจุบันเป็นของร้านอื่น ต้องการล้างตะกร้าและเริ่มใหม่หรือไม่?'))return;
+      cart={shopId:product.shopId,items:[]};
+    }
+    cart.shopId=product.shopId;
+    const sel=document.getElementById('qt-opt-'+productId);
+    const idx=sel?Number(sel.value):0;
+    const opt=(product.options||[])[idx]||null;
+    const unitPrice=Number(product.price||0)+Number(opt?.price||0);
+    const optionName=opt?.name||'';
+    const key=productId+'|'+optionName+'|'+Number(opt?.price||0);
+    const existing=cart.items.find(i=>i.cartKey===key);
+    if(existing)existing.qty++;
+    else cart.items.push({
+      cartKey:key,productId,name:product.name,price:unitPrice,basePrice:product.price,
+      option:optionName,optionPrice:Number(opt?.price||0),image:product.image,qty:1
+    });
+    dbSet('qt_cart_'+user.id,cart);
+    updateCartCountUI();
+    toast(optionName?`เพิ่ม ${product.name} (${optionName}) ลงตะกร้าแล้ว`:'เพิ่มลงตะกร้าแล้ว');
+  };
+
+  window.renderCart=function(){
+    const user=currentUser();if(!user||user.type!=='customer'){navigate('login');return;}
+    const cart=dbGet('qt_cart_'+user.id,{shopId:null,items:[]});
+    const shop=cart.shopId?dbGet('qt_users',[]).find(u=>u.id===cart.shopId):null;
+    const total=(cart.items||[]).reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||0),0);
+    layout('ตะกร้าสินค้า',`
+      <h2>🛒 ตะกร้าสินค้า</h2>${shop?`<p>ร้าน: <b>${esc(shop.shopName)}</b></p>`:''}
+      ${(cart.items||[]).length?cart.items.map(i=>`
+        <div class="cart-item">
+          <img src="${esc(i.image||placeholderImg())}" class="cart-item-img">
+          <div class="cart-item-info"><b>${esc(i.name)}</b>
+            ${i.option?`<div style="font-size:12px;color:#64748b">• ${esc(i.option)}${Number(i.optionPrice)?` +฿${money(i.optionPrice)}`:''}</div>`:''}
+            <div>฿${money(i.price)} x <button onclick="changeQty('${esc(i.cartKey||i.productId)}',-1)">-</button> ${i.qty} <button onclick="changeQty('${esc(i.cartKey||i.productId)}',1)">+</button></div>
+          </div>
+          <button class="btn-danger" onclick="removeFromCart('${esc(i.cartKey||i.productId)}')">ลบ</button>
+        </div>`).join(''):'<p>ตะกร้าว่างเปล่า</p>'}
+      ${(cart.items||[]).length?`<div class="cart-total">รวม: ฿${money(total)}</div><button class="btn-primary btn-block" onclick="navigate('checkout')">ดำเนินการสั่งซื้อ →</button>`:''}
+    `);
+  };
+
+  window.changeQty=function(key,delta){
+    const user=currentUser();let cart=dbGet('qt_cart_'+user.id,{items:[]});
+    const item=cart.items.find(i=>(i.cartKey||i.productId)===key);if(!item)return;
+    item.qty+=delta;
+    if(item.qty<=0)cart.items=cart.items.filter(i=>(i.cartKey||i.productId)!==key);
+    dbSet('qt_cart_'+user.id,cart);updateCartCountUI();renderCart();
+  };
+  window.removeFromCart=function(key){
+    const user=currentUser();let cart=dbGet('qt_cart_'+user.id,{items:[]});
+    cart.items=cart.items.filter(i=>(i.cartKey||i.productId)!==key);
+    dbSet('qt_cart_'+user.id,cart);updateCartCountUI();renderCart();
+  };
+
+  // แสดงข้อความแจ้งให้ร้านทราบเมื่อเปิดระบบครั้งแรก
+  function showFoodGPNotice(){
+    if(!currentUser||currentUser()?.type!=='shop')return;
+    const key='qt_food_gp10_notice_seen';
+    if(sessionStorage.getItem(key))return;
+    sessionStorage.setItem(key,'1');
+    setTimeout(()=>toast('ℹ️ ร้านอาหาร: ระบบคิด GP 10% อัตโนมัติ และสามารถตั้งธรรมดา/พิเศษ/ตัวเลือกเพิ่มเติมพร้อมราคาบวกได้'),900);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',showFoodGPNotice);
+  else setTimeout(showFoodGPNotice,1000);
+})();
+</script>
+
 </body>
 </html>
