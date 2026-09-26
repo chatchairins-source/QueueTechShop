@@ -29,6 +29,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Thonburi",sans-
 /* Merchant route and data entry point. */
 window.QT_SHOP_ONLY_BUILD = true;
 </script>
+
+<script id="qt-route-compat-v04">
+/* QueueGo v04 compatibility bridge.
+   Must exist before legacy boot/listener code can call qtRouteRender(). */
+(function(){
+  window.qtRouteRender = window.qtRouteRender || function(){
+    if (typeof window.qtShopRoute === 'function') {
+      return window.qtShopRoute();
+    }
+    return false;
+  };
+})();
+</script>
 </head>
 <body>
 <div id="app"></div>
@@ -1945,7 +1958,11 @@ function shopUser(){const u=currentUser();return u&&u.type==='shop'?u:null}
 function profileId(u){return u&&(u.shopProfileId||QT_SYNC.profileMaps?.shopByUserId?.get(u.id)||null)}
 function shopOrders(u){const pid=profileId(u);return dbGet('qt_orders',[]).filter(o=>String(o.shopId)===String(u.id)||(pid&&String(o.shopProfileId)===String(pid))).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))}
 function shopProducts(u){const pid=profileId(u);return dbGet('qt_products',[]).filter(p=>String(p.shopId)===String(u.id)||(pid&&String(p.shopProfileId)===String(pid)))}
-function img(v){return qtShopImageSrc(v)}
+function img(v){
+  const s=String(v||'').trim();
+  if(/^(https?:|data:image\/|blob:)/i.test(s)) return s;
+  return qtShopImageSrc(s);
+}
 function nav(active){const items=[['dashboard','home','หน้าหลัก'],['shop-orders','orders','คำสั่งซื้อ'],['shop-products','box','สินค้า'],['shop-promote','tag','โปรโมชั่น'],['shop-profile','user','บัญชี']];return `<nav class="qgm-bottom">${items.map(([r,i,l])=>`<button class="${active===r?'active':''}" onclick="navigate('${r}')">${svg(i)}<span>${l}</span></button>`).join('')}</nav>`}
 function top(title,back=false,red=false){return `<header class="qgm-top ${red?'red':''}">${back?`<button class="qgm-iconbtn qgm-back" onclick="history.length>1?history.back():navigate('dashboard')">${svg('back')}</button>`:`<div class="qgm-brand"><span class="qgm-logo">${svg('cart')}</span><span>QueueGo</span></div>`}<h1 class="${back?'qgm-title':'qgm-spacer'}">${back?esc(title):''}</h1>${back?'<div style="width:40px"></div>':`<button class="qgm-iconbtn" onclick="navigate('notifications')">${svg('bell')}</button>`}</header>`}
 function layout(title,body,active,opts={}){document.title=title+' - QueueGo';document.body.className='qgm-app';document.querySelectorAll('body>.qgm-bottom').forEach(n=>n.remove());document.getElementById('app').innerHTML=`<div class="qgm-shell">${top(title,!!opts.back,!!opts.red)}<main class="qgm-content">${body}</main>${nav(active)}</div>`}
@@ -1987,5 +2004,44 @@ window.renderShopProfileModern=function(){const u=shopUser();if(!u)return naviga
 function route(){const hash=location.hash.replace('#','')||'dashboard',[page,param]=hash.split('/'),u=currentUser();if(page==='login'||!u){if(page==='shop-register'&&typeof renderShopRegister==='function')return renderShopRegister();return renderShopLogin()}if(u.type==='admin'&&typeof renderAdminSupport==='function')return renderAdminSupport();if(u.type!=='shop'){clearSession();return renderShopLogin()}if(u.status!=='approved'&&!['shop-setup','approval-pending'].includes(page)&&typeof renderShopPending==='function')return renderShopPending();switch(page){case'home':case'dashboard':return renderShopDashboardModern(u);case'shop-orders':return renderShopOrdersModern();case'shop-order':return renderShopOrderModern(param);case'shop-products':return renderShopProductsModern();case'shop-catalog':return renderShopCatalog();case'shop-product':return renderShopProductEditor(param||'new');case'shop-promote':return renderShopPromote();case'shop-promote-create':return renderShopPromoteCreate();case'shop-profile':return renderShopProfileModern();case'shop-setup':return renderShopSetup();case'shop-settlement':return renderShopSettlement();case'shop-modules':return renderShopModules();case'notifications':return renderNotifications();default:return renderShopDashboardModern(u)}}
 window.qtShopRoute=route;window.router=route;
 })();
-</script></body>
+</script>
+<script id="qg-router-compat-v03">
+/* Compatibility bridge for legacy core listeners retained intentionally.
+   The old core router() still exists because sync/hydration code calls it.
+   Route rendering is delegated to the new Merchant Presentation Layer. */
+function qtRouteRender(){
+  if(typeof window.qtShopRoute === 'function') return window.qtShopRoute();
+}
+</script>
+
+
+<style id="qg-v04-reference-polish">
+:root{
+  --qg-red:#f20d2f;
+  --qg-bg:#f6f7f9;
+  --qg-card:#fff;
+  --qg-text:#15171a;
+  --qg-muted:#8b9098;
+  --qg-line:#e8eaee;
+  --qg-radius:18px;
+}
+html,body{max-width:100%;overflow-x:hidden}
+body.qt-shop-app{background:var(--qg-bg);color:var(--qg-text)}
+.qt-main,.qgm-main{width:100%;max-width:560px;margin:0 auto;box-sizing:border-box}
+.qgm-card{border-radius:var(--qg-radius);border:1px solid var(--qg-line);box-shadow:0 5px 18px rgba(20,24,32,.045)}
+.qgm-section-title{letter-spacing:-.25px}
+.qgm-menu-grid{gap:12px}
+.qgm-menu{min-width:0;overflow:hidden}
+.qgm-menu span:last-child{white-space:normal;line-height:1.25}
+.qt-shop-bottom{padding-bottom:max(8px,env(safe-area-inset-bottom));box-sizing:border-box}
+.qt-shop-bottom a{min-width:0}
+.qt-shop-bottom a span:last-child{white-space:nowrap}
+input,select,textarea,button{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Thonburi",sans-serif}
+input,select,textarea{font-size:16px}
+@media(max-width:380px){
+  .qgm-menu-grid{gap:9px}
+  .qgm-section-title{font-size:18px}
+}
+</style>
+</body>
 </html>
