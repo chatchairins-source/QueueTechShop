@@ -1850,24 +1850,41 @@ button{cursor:pointer}.qgm-shell{width:100%;min-height:100dvh;background:var(--q
 }
 .qgm-top.red{background:linear-gradient(135deg,#f01335,#ee0f2e);color:#fff;border:0}
 .qgm-brand{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;letter-spacing:-.4px}
+.qgm-brand-col{display:flex;flex-direction:column;gap:2px}
+.qgm-brand-col b{font-size:19px;font-weight:800;letter-spacing:-.4px;line-height:1}
+.qgm-brand-col small{font-size:11px;font-weight:500;opacity:.9}
 .qgm-logo{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--qg-red)}
 .qgm-logo svg{width:20px;height:20px}.qgm-spacer{flex:1}
-.qgm-iconbtn{width:40px;height:40px;border:0;background:transparent;color:inherit;display:grid;place-items:center;border-radius:12px}
+.qgm-iconbtn{width:40px;height:40px;border:0;background:transparent;color:inherit;display:grid;place-items:center;border-radius:12px;position:relative}
+.qgm-iconbtn .dot{position:absolute;top:8px;right:8px;width:7px;height:7px;border-radius:50%;background:#ffb020;border:1.5px solid var(--qg-red)}
 .qgm-iconbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .qgm-title{font-size:20px;font-weight:800;margin:0;letter-spacing:-.3px}
 .qgm-back{margin-left:-8px}
 .qgm-card{background:#fff;border:1px solid var(--qg-line);border-radius:var(--qg-radius);box-shadow:0 4px 16px rgba(20,25,35,.035)}
-.qgm-store-card{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-top:-2px;border-radius:16px 16px 0 0}
-.qgm-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#f0f1f3;border:1px solid #fff}
+.qgm-store-card{display:flex;align-items:center;gap:11px;padding:13px;margin-top:12px}
+.qgm-avatar{width:54px;height:54px;border-radius:14px;object-fit:cover;background:#f0f1f3;border:1px solid #f0f1f3}
 .qgm-store-meta{min-width:0;flex:1}.qgm-store-meta b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qgm-store-meta small{display:block;color:#6f747c;margin-top:2px;font-size:11px}.qgm-online{color:var(--qg-green)!important;font-weight:700}
+.qgm-store-meta small{display:block;color:#6f747c;margin-top:2px;font-size:11px}
+.qgm-online{color:var(--qg-green)!important;font-weight:700;display:flex;align-items:center;gap:5px;margin-top:4px}
+.qgm-online:before{content:'';width:6px;height:6px;border-radius:50%;background:var(--qg-green)}
 .qgm-cover{height:128px;border-radius:0 0 16px 16px;overflow:hidden;background:#e8eaed;margin-bottom:14px;position:relative}
 .qgm-cover img{width:100%;height:100%;object-fit:cover;display:block}
 .qgm-cover-edit{position:absolute;left:10px;bottom:9px;background:rgba(255,255,255,.93);color:var(--qg-red);border:0;border-radius:9px;padding:7px 10px;font-size:11px;font-weight:700}
 .qgm-section-title{font-size:16px;margin:16px 2px 10px;font-weight:800}
+.qgm-section-head{display:flex;align-items:center;justify-content:space-between;margin:18px 2px 10px}
+.qgm-section-head .qgm-section-title{margin:0}.qgm-section-head a{color:var(--qg-red);font-size:12px;font-weight:700;background:transparent;border:0}
 .qgm-stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .qgm-stat{padding:13px 12px;display:flex;align-items:center;gap:10px}.qgm-stat-icon{width:36px;height:36px;border-radius:12px;display:grid;place-items:center}
 .qgm-stat-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8}.qgm-stat b{display:block;font-size:18px}.qgm-stat small{color:#858b94;font-size:11px}
+.qgm-summary{display:grid;grid-template-columns:1fr 1fr 1fr;padding:14px 4px}
+.qgm-summary-item{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;border-left:1px solid var(--qg-line);padding:0 4px}
+.qgm-summary-item:first-child{border-left:0}
+.qgm-summary-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}
+.qgm-summary-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
+.qgm-summary-item b{font-size:16px;font-weight:800}.qgm-summary-item small{font-size:10.5px;color:#858b94}
+.qgm-summary-item:nth-child(1) .qgm-summary-icon{background:#fff0f3;color:var(--qg-red)}
+.qgm-summary-item:nth-child(2) .qgm-summary-icon{background:#eaf9f2;color:var(--qg-green)}
+.qgm-summary-item:nth-child(3) .qgm-summary-icon{background:#eaf6fc;color:#278bbd}
 .qgm-stat:nth-child(1) .qgm-stat-icon{background:#fff0f3;color:var(--qg-red)}.qgm-stat:nth-child(2) .qgm-stat-icon{background:#fff6e8;color:#e79a13}
 .qgm-stat:nth-child(3) .qgm-stat-icon{background:#eaf6fc;color:#278bbd}.qgm-stat:nth-child(4) .qgm-stat-icon{background:#fff0f2;color:#d92c48}
 .qgm-menu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
@@ -1986,7 +2003,8 @@ const svg=(name)=>{const p={
  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
  megaphone:'<path d="m3 11 14-6v14L3 13Z"/><path d="M7 14v5h4l-1-6M20 9v6"/>',
  camera:'<path d="M4 7h4l2-2h4l2 2h4v12H4Z"/><circle cx="12" cy="13" r="4"/>',
- plus:'<path d="M12 5v14M5 12h14"/>'
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ cash:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 6v0M18 18v0"/>'
 }[name]||'';return `<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`};
 
 function shopUser(){const u=currentUser();return u&&u.type==='shop'?u:null}
@@ -1999,7 +2017,7 @@ function img(v){
   return qtShopImageSrc(s);
 }
 function nav(active){const items=[['dashboard','home','หน้าหลัก'],['shop-orders','orders','คำสั่งซื้อ'],['shop-products','box','สินค้า'],['shop-promote','tag','โปรโมชั่น'],['shop-profile','user','บัญชี']];return `<nav class="qgm-bottom">${items.map(([r,i,l])=>`<button class="${active===r?'active':''}" onclick="navigate('${r}')">${svg(i)}<span>${l}</span></button>`).join('')}</nav>`}
-function top(title,back=false,red=false){return `<header class="qgm-top ${red?'red':''}">${back?`<button class="qgm-iconbtn qgm-back" onclick="history.length>1?history.back():navigate('dashboard')">${svg('back')}</button>`:`<div class="qgm-brand"><span class="qgm-logo">${svg('cart')}</span><span>QueueGo</span></div>`}<h1 class="${back?'qgm-title':'qgm-spacer'}">${back?esc(title):''}</h1>${back?'<div style="width:40px"></div>':`<button class="qgm-iconbtn" onclick="navigate('notifications')">${svg('bell')}</button>`}</header>`}
+function top(title,back=false,red=false){return `<header class="qgm-top ${red?'red':''}">${back?`<button class="qgm-iconbtn qgm-back" onclick="history.length>1?history.back():navigate('dashboard')">${svg('back')}</button>`:(red?`<div class="qgm-brand-col"><b>QueueGo</b><small>สำหรับร้านค้า</small></div>`:`<div class="qgm-brand"><span class="qgm-logo">${svg('cart')}</span><span>QueueGo</span></div>`)}<h1 class="${back?'qgm-title':'qgm-spacer'}">${back?esc(title):''}</h1>${back?'<div style="width:40px"></div>':`<button class="qgm-iconbtn" onclick="navigate('notifications')">${svg('bell')}<span class="dot"></span></button>`}</header>`}
 function layout(title,body,active,opts={}){document.title=title+' - QueueGo';document.body.className='qgm-app';document.querySelectorAll('body>.qgm-bottom').forEach(n=>n.remove());document.getElementById('app').innerHTML=`<div class="qgm-shell">${top(title,!!opts.back,!!opts.red)}<main class="qgm-content">${body}</main>${nav(active)}</div>`}
 window.qtShopLayout=(title,body,active)=>layout(title,body,active);
 
@@ -2009,8 +2027,9 @@ window.qtToggleLoginPassword=function(button){const input=document.getElementByI
 window.qtShopForgotPassword=async function(){const email=prompt('กรอกอีเมลบัญชีร้านค้า');if(!email)return;try{await qtSupabaseAuth('recover',{email:email.trim()});toast('ส่งลิงก์ตั้งรหัสผ่านใหม่แล้ว')}catch(e){toast(e.message||'ส่งลิงก์ไม่สำเร็จ')}};
 window.qtShopDoLogin=async function(e){e.preventDefault();const v=$('#qt-shop-login').value.trim(),password=$('#qt-shop-password').value,btn=e.submitter;if(btn)btn.disabled=true;try{const authEmail=v.includes('@')?v:qtAuthEmailFromPhone(v),auth=await qtSupabaseAuth('token?grant_type=password',{email:authEmail,password});let p=await qtLoadOwnSupabaseUser(auth.access_token,auth.user.id);if(!p)throw new Error('เข้าระบบได้ แต่ไม่พบบัญชีร้านค้าในฐานข้อมูล กรุณาติดต่อผู้ดูแล');const u=qtUserFromRow(p);if(!['shop','admin'].includes(u.type))throw new Error('บัญชีนี้ไม่ใช่ร้านค้า');if(u.status==='suspended')throw new Error('บัญชีถูกระงับ');QT_DB_CACHE.qt_users=[u];qtMarkClean('qt_users');setSession({userId:u.id,authUserId:p.auth_user_id,accessToken:auth.access_token,refreshToken:auth.refresh_token||null,expiresAt:auth.expires_at ? Number(auth.expires_at)*1000 : (qtJwtExpiryMs(auth.access_token)||null),role:p.role});navigate(u.type==='admin'?'admin-support':'dashboard');setTimeout(()=>qtBackgroundHydrate({light:false}),0)}catch(err){toast((err?.message==='Invalid login credentials'?'เบอร์โทรศัพท์/อีเมล หรือรหัสผ่านไม่ถูกต้อง':err?.message)||'เข้าสู่ระบบไม่สำเร็จ')}finally{if(btn)btn.disabled=false}return false};
 
-window.renderShopDashboardModern=function(u){const os=shopOrders(u),today=qtLocalDateKey(),tod=os.filter(o=>(o.orderDate||qtLocalDateKey(o.createdAt))===today);const count=s=>tod.filter(o=>s.includes(o.status)).length;const cover=img(u.cover||u.coverImage||u.logo),logo=img(u.logo||u.avatar);
-layout('หน้าหลัก',`<section class="qgm-card qgm-store-card"><img class="qgm-avatar" src="${esc(logo)}"><div class="qgm-store-meta"><b>${esc(u.shopName||u.name||'ร้านค้า')}</b><small class="qgm-online">● ออนไลน์</small><small>${esc(categoryLabel(u.category)||'ร้านค้า')}</small></div></section><div class="qgm-cover"><img src="${esc(cover)}"><button class="qgm-cover-edit" onclick="navigate('shop-setup')">แก้ไขข้อมูลร้าน</button></div><h2 class="qgm-section-title">สรุปออเดอร์วันนี้</h2><section class="qgm-stats">${[['ออเดอร์ทั้งหมด',tod.length,'orders'],['กำลังเตรียม',count(['shop_accepted','preparing']),'clock'],['จัดส่งแล้ว',count(['completed','delivered']),'box'],['ยกเลิก',count(['cancelled']),'close']].map(x=>`<div class="qgm-card qgm-stat"><span class="qgm-stat-icon">${svg(x[2])}</span><div><small>${x[0]}</small><b>${x[1]}</b></div></div>`).join('')}</section><h2 class="qgm-section-title">เมนูหลัก</h2><section class="qgm-menu-grid">${[['shop-orders','orders','จัดการคำสั่งซื้อ'],['shop-products','box','จัดการสินค้า'],['shop-promote','tag','โปรโมชั่น'],['shop-settlement','chart','รายงาน'],['shop-profile','home','ข้อมูลร้านค้า'],['shop-modules','gear','ตั้งค่า']].map(x=>`<button class="qgm-menu" onclick="navigate('${x[0]}')"><span class="ico">${svg(x[1])}</span><span>${x[2]}</span></button>`).join('')}</section>`,'dashboard',{red:true})};
+function qgmTimeAgo(ts){const d=Math.max(0,Math.floor((Date.now()-new Date(ts||Date.now()).getTime())/1000));if(d<60)return 'เมื่อสักครู่';if(d<3600)return Math.floor(d/60)+' นาทีที่แล้ว';if(d<86400)return Math.floor(d/3600)+' ชม.ที่แล้ว';return Math.floor(d/86400)+' วันที่แล้ว'}
+window.renderShopDashboardModern=function(u){const os=shopOrders(u),today=qtLocalDateKey(),tod=os.filter(o=>(o.orderDate||qtLocalDateKey(o.createdAt))===today);const sales=tod.reduce((sum,o)=>sum+Number(o.total||o.totalAmount||0),0);const customers=new Set(tod.map(o=>o.customerId||o.customerPhone||o.customerName)).size;const logo=img(u.logo||u.avatar);const recent=[...os].sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)).slice(0,5);
+layout('หน้าหลัก',`<section class="qgm-card qgm-store-card"><img class="qgm-avatar" src="${esc(logo)}"><div class="qgm-store-meta"><b>${esc(u.shopName||u.name||'ร้านค้า')}</b><small>${esc(categoryLabel(u.category)||'ร้านค้า')}</small><small class="qgm-online">เปิดรับออเดอร์</small></div></section><div class="qgm-section-head"><h2 class="qgm-section-title">สรุปวันนี้</h2><button onclick="navigate('shop-settlement')">ดูทั้งหมด &rsaquo;</button></div><section class="qgm-card qgm-summary">${[['orders',tod.length,'ออเดอร์วันนี้'],['cash','฿'+sales.toLocaleString('th-TH'),'ยอดขายวันนี้'],['user',customers,'ลูกค้าวันนี้']].map(x=>`<div class="qgm-summary-item"><span class="qgm-summary-icon">${svg(x[0])}</span><b>${x[1]}</b><small>${x[2]}</small></div>`).join('')}</section><div class="qgm-section-head"><h2 class="qgm-section-title">ออเดอร์ล่าสุด</h2><button onclick="navigate('shop-orders')">ดูทั้งหมด &rsaquo;</button></div>${recent.length?recent.map(o=>{const s=status(o),first=o.items?.[0]||{},names=(o.items||[]).map(i=>i.name||i.itemName).filter(Boolean).join(' + ');return `<button class="qgm-card qgm-order" onclick="navigate('shop-order/${o.id}')"><img src="${esc(img(first.image||first.image_url))}"><div class="qgm-order-main"><b>${esc(displayOrderNumber(o))}</b><small>${qgmTimeAgo(o.createdAt)}</small><small>${esc(names||'รายการสินค้า')}</small></div><div class="qgm-order-side"><span class="qgm-status ${s[0]}">${s[1]}</span><small>฿${Number(o.total||o.totalAmount||0).toLocaleString('th-TH')}</small></div></button>`}).join(''):'<div class="qgm-empty" style="min-height:20dvh"><h2>ยังไม่มีออเดอร์</h2></div>'}`,'dashboard',{red:true})};
 
 function status(o){if(o.status==='pending_shop')return['pending','รอรับ'];if(['shop_accepted','preparing'].includes(o.status))return['preparing','กำลังเตรียม'];if(['completed','delivered','waiting_rider','rider_to_customer'].includes(o.status))return['done','จัดส่งแล้ว'];return['cancel','ยกเลิก']}
 window.qgmOrderFilter=function(mode){document.querySelectorAll('.qgm-order').forEach(el=>el.hidden=mode!=='all'&&el.dataset.status!==mode);document.querySelectorAll('.qgm-tabs button').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode))}
